@@ -1,0 +1,404 @@
+---
+title: "Stock portfolio summary"
+author: "BScheliga"
+date: "15/10/2021"
+output:
+  html_document:
+    df_print: paged
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(quantmod) # to get the stock exchange data
+library(tidyverse) # for plotting
+library(vroom)
+library(lubridate)
+library(ggthemes)
+library(webr)# for PieDonut()
+
+### ggplot theme
+theme_set(theme_bw())
+
+```
+
+
+This is a test version of the stock portfolio summary. 
+
+#Note:
+- change wd to more appropiate
+- might need to use reshape2
+- Add geography category (e.g. Continents or countries maybe)
+- Need account for the average purchase and selling prices. At the moment, we are calculating the overall portfolio value based on the closing value of a stock.
+- asked Barry what he thinks about changing point (pence) to pounds
+- need to build a summary for the pie-chart based on Portfolio on the last weekday before Sys.Date 
+
+Known (potential) issues:
+- for app with data entry tool. the user need to investigate, if stock it traded in GPX or GBP
+- Initial I used Yahoo.finace as a data source, but their data was of poor quality. e.g. inconsistent in stock value unit, a timeseries could have GPX and GPB. Hence, I changed to Alpha Vatage. However, they require you to have an API.KEY.
+- identical EPIC's at different Stock exchange, will cause a problems in some of the loops where *vec_EPIC* is used
+- when calculating the investments selling stock with a lose will generate positive values in the cs_???_Inv columns. However, that money is actually lost :(
+
+```{r load your portfolio data, include=FALSE}
+# this is empty
+dir()
+df_PF_input <- vroom("ETF_Share.csv",col_types = c(EPIC = "f", Name = "f", Buy_Sell = "f", Type = "f", Sector = "f", Market = "f")) # "f" for factor, 
+
+# Formatting the Date column. 
+df_PF_input <- mutate(df_PF_input,Date = dmy(Date)) 
+
+```
+
+
+```{r Prelude stuff (extract EPIC, cumsums etc), include=FALSE}
+# here we will extract the EPIC from the .cvs file into a vector to use them in the getSymbol chunk
+vec_EPIC <- levels(df_PF_input$EPIC)
+
+# reorder dt_PF_input after the dates
+df_PF_input <- df_PF_input[order(df_PF_input$Date),]
+# Changing the sold Volumes of a stock to negative values for the cumulative sums
+df_PF_input$Volume <- ifelse(df_PF_input$Buy_Sell == "BUY",df_PF_input$Volume, -(df_PF_input$Volume))
+
+# Calculating the cumulative sum
+## it is easier (for me) to create a separate df here add the cumulative sum (cs) for the trading costs later to time series. It prevents the cs_Trad_cost "fluctuate" later between the EPIC on the same day as the fill-function for the time series doesn't adjust the cs trading costs. Don't worry, if the explanation doesn't make sense. Just know it is needed. Peace out.
+df_cs_Trad_cost <- data.frame(Date = df_PF_input$Date, cs_Trad_cost = df_PF_input$Trad_cost)
+df_cs_Trad_cost <- aggregate(df_cs_Trad_cost["cs_Trad_cost"], by=df_cs_Trad_cost["Date"],sum) # We'll need that step, in case more than one trade action was made per day
+df_cs_Trad_cost$cs_Trad_cost <- cumsum(df_cs_Trad_cost$cs_Trad_cost)
+
+#### Calculating the cumulative sum for each stock (EPIC) in our portfolio 
+df_PF_input <- df_PF_input %>% group_by(EPIC) %>% mutate(cs_Volume = cumsum(Volume))%>% ungroup()
+
+### Calculating overall investment through the booking cost based on average cost per stock and number of stock bought. Selling stocks result in "negative" investment. the overall investment is a cumulative sum
+
+## per indivual stock
+df_PF_input <- df_PF_input %>% group_by(EPIC) %>% mutate(cs_Stock_Inv = round(cumsum(Aver_cost*Volume/100),2)) %>% ungroup()
+
+## overall fo the whole portfolio NOTE: Daily values
+df_PF_input <- df_PF_input %>% mutate(cs_All_Inv = round(Aver_cost*Volume/100,2))
+
+#df_temp <- aggregate(df_PF_input["cs_All_Inv"],by = df_PF_input["Date"], sum )
+#df_temp$cs_All_Inv <- cumsum(df_temp$cs_All_Inv)
+#df_PF_input$cs_All_Inv <- left_join(df_PF_input, df_temp, by = "Date")$cs_All_Inv.y
+#rm(df_temp)
+
+df_All_Inv <- aggregate(df_PF_input["cs_All_Inv"],by = df_PF_input["Date"], sum )
+df_All_Inv$cs_All_Inv <- cumsum(df_All_Inv $cs_All_Inv)
+#df_PF_input$cs_All_Inv <- left_join(df_PF_input, df_temp, by = "Date")$cs_All_Inv.y
+#rm(df_temp)
+
+## per type (ETF and Share) NOTE: Daily values
+df_PF_input <- df_PF_input %>% group_by(Type) %>% mutate(cs_ETF_Share_Inv = round(Aver_cost*Volume/100,2)) %>% ungroup()
+
+#df_temp <- aggregate(df_PF_input["cs_ETF_Share_Inv"],by = df_PF_input[c("Date", "Type")], sum )
+#df_temp <- df_temp %>% group_by(Type) %>% mutate(cs_ETF_Share_Inv = cumsum(cs_ETF_Share_Inv)) %>% ungroup()
+#df_PF_input$cs_ETF_Share_Inv <- left_join(df_PF_input, df_temp, by = c("Date","Type"))$cs_ETF_Share_Inv.y
+#rm(df_temp)
+
+df_ETF_Share_Inv <- aggregate(df_PF_input["cs_ETF_Share_Inv"],by = df_PF_input[c("Date", "Type")], sum )
+df_ETF_Share_Inv <- df_ETF_Share_Inv %>% group_by(Type) %>% mutate(cs_ETF_Share_Inv = cumsum(cs_ETF_Share_Inv)) %>% ungroup()
+#df_PF_input$cs_ETF_Share_Inv <- left_join(df_PF_input, df_temp, by = c("Date","Type"))$cs_ETF_Share_Inv.y
+#rm(df_temp)
+
+```
+
+```{r Setup API.KEY revolver, include=FALSE}
+
+# One API can do 5 requests per hour aka request 5 stock timeseries
+API_KEY_1 <- "23OWOXACHQ1GPHF3"
+API_KEY_2 <- "E0FOXEVH0PJN42RA"
+API_KEY_3 <- "ZSDYFZL73TSULLRI"
+API_KEY_4 <- "66DBPI7BYN4OFIEC"
+API_KEY_5 <- "ZLAULT9DJDDNRRSH"
+
+## store all the names of the API-Key object with an 
+## this will be used to cycle through API-keys with each request
+API_ABDN <- ls(pattern="API_KEY")
+
+# to keep track of how many are left of the day, 5*500=2500 per day
+API_counter <- 2500
+
+```
+
+
+
+
+```{r getSymbol - Get stock exchange data, include=FALSE}
+# we are using the vec_EPIC with our stock EPIC's to retrieve the historical data for each stock using getSymbols()
+# Note need the ".L" for London stock exchange. NASDAQ is the default
+
+df_StockExch <- ".L" # I know, not a data frame, yet. However, it is likely that is will be one in a later version to be able pull the hist. data for stocks at different Stock exchange in a portfolio
+
+# Setup 
+keycnt=1 # will be used to go through the API's
+
+for(i in 1:length(vec_EPIC)){
+  start_time <- Sys.time() # when the loop starts
+  getSymbols(paste(vec_EPIC[i],df_StockExch,sep = ""), src="av", api.key=get(API_ABDN[keycnt]), periodicity="daily", output.size="full")
+  API_counter <- API_counter-1
+  print(get(API_ABDN[keycnt]))
+print(paste(API_counter, "requests left on API", sep = " "))
+  keycnt = keycnt + 1
+  Sys.sleep(12) # wait for 12 secs after each calls to comply with the API limitation. Not more the 5 calls per minute.
+    if (keycnt > length(API_ABDN)){
+      keycnt = 1
+        }
+}
+
+```
+
+```{r create timeserie for our stock portfolio, include=FALSE}
+#Note: getSymbol returns a xts-object which does not have rownames. But the dates as index. So, we need to use index to access the data
+
+#First we are creating a new larger df with all dates from point of purchase until now
+# following this solutions https://stackoverflow.com/questions/50530914/how-to-generate-date-sequence-between-two-dates-in-same-column-in-r
+df_ETF_Share_ts <- df_PF_input %>% group_by(EPIC)%>% # for each share, we can potentially delete that later
+  complete(Date = seq.Date(min(Date), max(Sys.Date()), by= "day")) %>% # Generates the dates between the Date. Sys.Date for update current date
+  fill(EPIC, Name, Type, Market, Sector, cs_Volume, cs_Stock_Inv) %>% ungroup()
+
+# dropping the columns now add them later again :(, I don't know it better
+df_ETF_Share_ts <- df_ETF_Share_ts[ , !names(df_ETF_Share_ts) %in% c("cs_All_Inv", "cs_ETF_Share_Inv")]
+
+# Creating time series for the overall invested amount
+df_All_Inv_ts <- df_All_Inv %>%  complete(Date = seq.Date(min(Date), max(Sys.Date()), by= "day")) %>% # Generates the dates between the Date. Sys.Date for update current date
+  fill(cs_All_Inv)
+
+# Creating time series for the invested amount per stock type (ETF/Share)
+df_ETF_Share_Inv_ts <- df_ETF_Share_Inv %>% group_by(Type)%>%  complete(Date = seq.Date(min(Date), max(Sys.Date()), by= "day")) %>% # Generates the dates between the Date. Sys.Date for update current date
+  fill(Type,cs_ETF_Share_Inv)%>% ungroup()
+
+# Creating time series for the trading costs
+df_cs_Trad_cost_ts <- df_cs_Trad_cost %>% complete(Date = seq.Date(min(Date), max(Sys.Date()), by= "day")) %>% # Generates the dates between the Date. Sys.Date for update current date
+  fill(cs_Trad_cost)
+
+# join them together
+df_ETF_Share_ts <- left_join(df_ETF_Share_ts , df_cs_Trad_cost_ts, by = "Date") #Trading cost
+df_ETF_Share_ts <- left_join(df_ETF_Share_ts , df_All_Inv_ts, by = "Date") # overall invested amount
+df_ETF_Share_ts <- left_join(df_ETF_Share_ts , df_ETF_Share_Inv_ts, by = c("Date", "Type")) # invested amount per stock type (ETF/Share)
+
+
+# house cleaning
+remove(df_cs_Trad_cost, df_cs_Trad_cost_ts, df_All_Inv_ts, df_All_Inv,df_ETF_Share_Inv_ts, df_ETF_Share_Inv )
+
+# getting names of the xts-objects created by getSymbol for the for-loop below
+vec_PF_StockNames <- ls(pattern = paste(vec_EPIC, collapse = "|"))
+
+
+# Need to change xts-object from getSymbols to into a data.frame to merge it
+for(i in 1:length(vec_PF_StockNames)){
+   df_temp <- data.frame(Date = as.Date(index(get(vec_PF_StockNames[i]))),coredata(get(vec_PF_StockNames[i])))
+   assign(paste(vec_PF_StockNames[i]), df_temp)
+}
+
+##### Joining the finance data with our portfolio data
+
+
+
+for(i in 1:length(vec_EPIC)){
+  k = which (str_detect(vec_PF_StockNames, vec_EPIC[i])) # check which EPIC matches which data.frame name for the historical record in vec_PF_StockNames. NOTE: identical EPIC's at different Stock exchange, will cause a problem here
+  df_temp <- left_join(df_ETF_Share_ts %>% filter(EPIC == vec_EPIC[i]), get(vec_PF_StockNames[k])[ , c("Date",paste(vec_PF_StockNames[k],".Close",sep = ""))], by = "Date", )
+  
+  colnames(df_temp)[ncol(df_temp)] <- "Value" # ncol() give us the number of columns in df_temp and coincidentally that number also relates to the last column, which we want to rename. 
+
+# Creating the combined stock timeserie with all stock values in one column
+  if(exists("df_temp_rbind")){
+    df_temp_rbind <- rbind(df_temp_rbind, df_temp)
+  }else{
+    df_temp_rbind <- df_temp
+  }
+}
+
+df_ETF_Share_ts <- df_temp_rbind
+
+rm(df_temp, df_temp_rbind)
+
+```
+
+```{r cleaning the Stock timeseries and calculating the Stock values, include=FALSE }
+
+# removing weekends which are 1 and 7 in wday()-function
+df_ETF_Share_ts <-  df_ETF_Share_ts[!(wday(df_ETF_Share_ts$Date) %in% c(1,7)),]
+#Note: there will still be NA on Bank holidays, I guess. But they differ from country to country
+
+#### removing other NA
+## e.g. bank holidays
+df_ETF_Share_ts <- df_ETF_Share_ts[!is.na(df_ETF_Share_ts$Value),]
+## Setting a Volume of 0 (When stock has been completely sold) to NA and removing it. To keep the dataset as small as possible
+df_ETF_Share_ts$cs_Volume[which(df_ETF_Share_ts$cs_Volume==0)] <- NA
+df_ETF_Share_ts <- df_ETF_Share_ts[!is.na(df_ETF_Share_ts$cs_Volume),]
+# reshape the data.frame to have all stock values in column
+
+# Calculating the overall Stock value in Portfolio
+df_ETF_Share_ts$PF_Stock_Value <- round((df_ETF_Share_ts$cs_Volume * df_ETF_Share_ts$Value)/100,2) # to have it in GBP
+
+# VUSA.L is displayed in GBP and not pence
+
+df_ETF_Share_ts$PF_Stock_Value[df_ETF_Share_ts$EPIC == "VUSA"]<- df_ETF_Share_ts$PF_Stock_Value[df_ETF_Share_ts$EPIC == "VUSA"]*100
+
+```
+
+
+```{r more calculation, include=FALSE}
+# relative gains and losses in percent
+df_ETF_Share_ts$rel_Gain_Loss <- round(((df_ETF_Share_ts$PF_Stock_Value-df_ETF_Share_ts$cs_Stock_Inv)/df_ETF_Share_ts$cs_Stock_Inv)*100,2)
+# relative gains and losses in percent overall Share and ETF
+
+
+# sum stock values by type and date
+
+df_ETF_Share_ts$RGL_EFTShare <-round(((left_join(df_ETF_Share_ts,aggregate(df_ETF_Share_ts["PF_Stock_Value"], by=df_ETF_Share_ts[c("Date", "Type")],sum), by= c("Date", "Type"))$PF_Stock_Value.y - df_ETF_Share_ts$cs_ETF_Share_Inv)/df_ETF_Share_ts$cs_ETF_Share_Inv)*100,2)  
+
+
+# Here we are calculating the relative overall gains & losses base on the over investment in the stock type ETF & Share. 1) In the left_join() we are calculating the daily sum of the over ETF and Share values in our portfolio. 2) And then subtract the type based in investment from the daily sum. 3) turn it in percentage  
+
+
+```
+
+### Plotting
+
+
+```{r Current distributions }
+
+# Overall Market & Sector distribution
+subset(df_ETF_Share_ts, Date %in% max(df_ETF_Share_ts$Date))%>%
+  group_by(Market, Sector) %>% 
+  summarise(across(c(PF_Stock_Value), list(sum = sum))) %>% 
+  PieDonut(., aes(Market, Sector, count=PF_Stock_Value_sum),
+         title = "Overall Market & Sector distribution",
+         color = "black",
+                  ratioByGroup = FALSE)
+
+# Overall Sector & Stock distribution
+subset(df_ETF_Share_ts, Date %in% max(df_ETF_Share_ts$Date))%>%
+  select(Sector, EPIC, PF_Stock_Value) %>% 
+  droplevels.data.frame() %>% 
+  PieDonut(., aes(Sector, EPIC, count=PF_Stock_Value),
+         title = "Overall Sector & Stock distribution",
+         color = "black",
+                  ratioByGroup = FALSE)
+
+## ETF
+subset(df_ETF_Share_ts, Date %in% max(df_ETF_Share_ts$Date))%>%
+  filter(Type =="ETF") %>% 
+  group_by(Market, Sector) %>% 
+  summarise(across(c(PF_Stock_Value), list(sum = sum))) %>% 
+  as.data.frame() %>% 
+  droplevels(.$Sector) %>% 
+  PieDonut(., aes(Market, Sector, count=PF_Stock_Value_sum),
+         title = "ETF Market & Sector distribution",
+         color = "black",
+                  ratioByGroup = FALSE)
+ 
+## Share not working
+subset(df_ETF_Share_ts, Date %in% max(df_ETF_Share_ts$Date))%>%
+  filter(Type =="Share") %>% 
+  group_by(Sector, EPIC) %>% 
+  summarise(across(c(PF_Stock_Value), list(sum = sum))) %>% 
+  droplevels.data.frame %>% 
+  PieDonut(., aes(Sector,EPIC, count=PF_Stock_Value_sum),
+         title = "Share & Sector distribution",
+         color = "black",
+                  ratioByGroup = FALSE)
+
+```
+
+
+
+```{r  Overall Portfolio preformance}
+
+ggplot(df_ETF_Share_ts,aes(Date,PF_Stock_Value, fill=EPIC))+geom_area(alpha=0.9, colour="black")+
+  ylab("Overall portfolio value in GPB")+xlab("")+theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1))+
+  scale_x_date(date_labels = "%b-%Y", date_breaks = "month")
+
+ggplot(df_ETF_Share_ts)+
+  geom_area(aes(Date,PF_Stock_Value, fill=EPIC),alpha=0.5)+ 
+  geom_line(aes(Date,cs_Stock_Inv,colour="Investment"),linetype="dashed")+
+  ylab("Overall portfolio value in GPB")+xlab("")+theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1))+
+  scale_x_date(date_labels = "%b-%Y", date_breaks = "month")+facet_wrap(~EPIC, ncol = 2)+
+  scale_color_manual(name = "", values = c("Investment" = "black")) # colour needs to be aes()
+
+```
+
+```{r Portfolio relative gain and losses}
+
+ggplot(df_ETF_Share_ts)+
+  geom_area(aes(x=Date, y=ifelse(rel_Gain_Loss<0, rel_Gain_Loss,0)), fill="darkred", alpha = 0.7) +
+  geom_area(aes(x=Date, y=ifelse(rel_Gain_Loss>0, rel_Gain_Loss, 0)), fill="darkgreen", alpha = 0.7)+
+  geom_hline(yintercept=0, linetype="dashed")+
+  ylab("Gain and Losses [%]")+xlab("")+
+  theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1))+
+  scale_x_date(date_labels = "%b-%Y", date_breaks = "month")+facet_wrap(~EPIC, ncol = 2)
+
+
+
+
+```
+
+```{r Trading costs}
+
+ggplot(df_ETF_Share_ts,aes(Date,cs_Trad_cost))+
+  geom_line()+
+  ylab("Lifetime Trading cost [GPB]")+xlab("")+
+  theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1))+
+  scale_x_date(date_labels = "%b-%Y", date_breaks = "month")
+```
+
+
+```{r ETF preformance}
+ggplot(subset(df_ETF_Share_ts, Type %in% "ETF"))+
+  geom_area(aes(x=Date, y=ifelse(PF_Stock_Value>cs_Stock_Inv, PF_Stock_Value,cs_Stock_Inv)), fill="darkgreen", alpha = 0.7)+
+  geom_area(aes(x=Date, y=cs_Stock_Inv), fill="darkred", alpha = 0.7)+
+  geom_area(aes(x=Date, y=ifelse(PF_Stock_Value<cs_Stock_Inv, PF_Stock_Value,cs_Stock_Inv)), fill="grey") +
+  ylab("ETF preformance [GBP]")+xlab("")+
+  theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1))+
+  scale_x_date(date_labels = "%b-%Y", date_breaks = "month")+facet_wrap(~EPIC, ncol = 2)
+
+ggplot(subset(df_ETF_Share_ts, Type %in% "ETF"))+
+  geom_area(aes(x=Date, y=ifelse(rel_Gain_Loss<0, rel_Gain_Loss,0)), fill="darkred", alpha = 0.7) +
+  geom_area(aes(x=Date, y=ifelse(rel_Gain_Loss>0, rel_Gain_Loss, 0)), fill="darkgreen", alpha = 0.7)+
+  geom_hline(yintercept=0, linetype="dashed")+
+  ylab("Gain and Losses [%]")+xlab("")+
+  theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1))+
+  scale_x_date(date_labels = "%b-%Y", date_breaks = "month")+facet_wrap(~EPIC, ncol = 2)
+
+
+```
+
+
+```{r Share preformance}
+
+ggplot(subset(df_ETF_Share_ts, Type %in% "Share"))+
+  geom_area(aes(x=Date, y=ifelse(PF_Stock_Value>cs_Stock_Inv, PF_Stock_Value,cs_Stock_Inv)), fill="darkgreen", alpha = 0.7)+
+  geom_area(aes(x=Date, y=cs_Stock_Inv), fill="darkred", alpha = 0.7)+
+  geom_area(aes(x=Date, y=ifelse(PF_Stock_Value<cs_Stock_Inv, PF_Stock_Value,cs_Stock_Inv)), fill="grey") +
+  ylab("Share preformance [GBP]")+xlab("")+
+  theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1))+
+  scale_x_date(date_labels = "%b-%Y", date_breaks = "month")+facet_wrap(~EPIC, ncol = 2)
+
+ggplot(subset(df_ETF_Share_ts, Type %in% "Share"))+
+  geom_area(aes(x=Date, y=ifelse(rel_Gain_Loss<0, rel_Gain_Loss,0)), fill="darkred", alpha = 0.7) +
+  geom_area(aes(x=Date, y=ifelse(rel_Gain_Loss>0, rel_Gain_Loss, 0)), fill="darkgreen", alpha = 0.7)+
+  geom_hline(yintercept=0, linetype="dashed")+
+  ylab("Gain and Losses [%]")+xlab("")+
+  theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1))+
+  scale_x_date(date_labels = "%b-%Y", date_breaks = "month")+facet_wrap(~EPIC, ncol = 2)
+
+```
+```{r Share vs ETF}
+
+ggplot(df_ETF_Share_ts)+
+  geom_area(aes(x=Date, y=ifelse(RGL_EFTShare<0, RGL_EFTShare,0)), fill="darkred", alpha = 0.7, position = "identity") +
+  geom_area(aes(x=Date, y=ifelse(RGL_EFTShare>0, RGL_EFTShare, 0)), fill="darkgreen", alpha = 0.7,position = "identity")+
+  geom_hline(yintercept=0, linetype="dashed")+
+  facet_wrap(~Type)+
+  ylab("Gain and Losses [%]")+xlab("")+
+  theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1))+
+  scale_x_date(date_labels = "%b-%Y", date_breaks = "month")
+
+
+
+
+```
+### distrubtions 
+```{r}
+
+```
+
