@@ -2,10 +2,10 @@
 
 ## Abstract
 
-This is script allow you to assess the performance, dividend yield and the sector and market distribution of your stock portfolio. 
+This is RMarkdown script allow you to assess the performance, dividend yield as well as the sector and market distribution of your stock portfolio. 
 
-London stock exchange is hard coded in the scripted at the moment
-Check yahoo finance for the appropiate surfix for the stocks 
+London stock exchange is hard coded in the scripted at the moment  
+Check yahoo finance for the appropiate surfix for the stocks   
 
 I try do make the script as generic as possible to increase the accessiblity for other users.
 
