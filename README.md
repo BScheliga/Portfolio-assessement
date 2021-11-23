@@ -26,7 +26,7 @@ The historical stock records based in the EPIC from [https://www.alphavantage.co
 
 ### Warning & Disclaimer
 1. Make sure you are not **accidentally and unintentionally** uploading trading action history to github when cloning and using this script.  
-2. I think is 
+2. I think it is working corr
 ### API-key
 ### Change stock exchange from London to some other place?
 
