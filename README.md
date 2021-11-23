@@ -35,20 +35,21 @@ Example layout:
 
 Variable definition:
 
-|Variable name| definition | format|
+|Variable name| Definition | Format|
 |-------------|------------|-------|
 |EPIC|Exchange Price Information Code of the stock |*character*|
-|Name| Long name of the stock|*character*|
+|Name| Long name of the (company) stock|*character*|
 |Buy_Sell| Use **BUY** or **SELL** to indicate the trade action|*character*|
 |Aver_cost| Average costs per share for the trade action|*numeric*|
 |Volume| Amount of shares that were traded in the trade action|*numeric*|
 |Date| Date of the trade action|DD/MM/YYYY|
 |Type| Use **ETF** or **Share**|*character*|
-|Trad_Cost| Trading costs for executing the trade action|*numeric*
-|Sector| The commercial or ind
-
-
-
+|Trad_Cost| Trading costs for executing the trade action|*numeric*|
+|Sector| The commercial or industrial sector the company is in. *Note:* For ETFs like MSCI World use **Mixed**|*character*|
+|Market| Use **Developed Markekt** or **Emerging Market**|*character*| 
+  
+  
+  
 #### 2) dividend pay out history
 Filename: dividend.csv  
 Example layout: 
@@ -65,6 +66,16 @@ Example layout:
 |HSBA	|HSBC HOLDINGS PLC ORD USD0.50UK REG	|30-Sep-21|	19-Aug-21|	120|	4.45|	Share|
 |HMEF|	HSBC ETFS PLC MSCI EMERGING MKT UCITS ETF	|15-Nov-21|	21-Oct-21|	90|	12.04	|ETF|
 
+Variable definition:
+
+|Variable name| Definition | Format|
+|-------------|------------|-------|
+|EPIC|Exchange Price Information Code of the stock |*character*|
+|Name| Long name of the (company) stock|*character*|
+|Issue_Date| Date the dividends were issued |DD/MM/YYYY|
+|XD_Date| dividend ex-date|DD/MM/YYYY|
+|Shares_held_XD_date| number of share held on the dividend ex-date|*numeric*|
+|Type| Use **ETF** or **Share**|*character*|
 
 
 
