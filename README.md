@@ -31,7 +31,23 @@ Example layout:
 |HSBA|	HSBC HOLDINGS PLC ORD USD0.50UK REG|	BUY|	335.4|	60|	05/11/2020|	Share|	5|	Banking|	Developed Markets|
 |HMEF|HSBC ETFS PLC MSCI EMERGING MKT UCITS ETF|	BUY|	924.73|	90|	01/12/2020|	ETF	|5|	Mixed|	Emerging Market|
 |VOD|	VODAFONE GROUP ORD USD0.2095238|	BUY|	132.7|	100|	21/04/2021|	Share|	5|	Tech|	Developed Markets|
-|HSBA|	HSBC HOLDINGS PLC ORD USD0.50UK REG|	BUY|	378.6|	60|	05/01/2021|	Share|	5|	Banking|	Developed Markets|
+|HSBA|	HSBC HOLDINGS PLC ORD USD0.50UK REG|	BUY|	378.6|	60|	05/01/2021|	Share|	5|	Banking|	Developed Markets|  
+
+Variable definition:
+
+|Variable name| definition | format|
+|-------------|------------|-------|
+|EPIC|Exchange Price Information Code of the stock |*character*|
+|Name| Long name of the stock|*character*|
+|Buy_Sell| Use **BUY** or **SELL** to indicate the trade action|*character*|
+|Aver_cost| Average costs per share for the trade action|*numeric*|
+|Volume| Amount of shares that were traded in the trade action|*numeric*|
+|Date| Date of the trade action|DD/MM/YYYY|
+|Type| Use **ETF** or **Share**|*character*|
+|Trad_Cost| Trading costs for executing the trade action|*numeric*
+|Sector| The commercial or ind
+
+
 
 #### 2) dividend pay out history
 Filename: dividend.csv  
