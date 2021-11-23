@@ -2,7 +2,7 @@
 
 ## Abstract
 
-## Where to the time series come from?
+## Where to the time series data comes from?
 
 
 ## How to use it?
