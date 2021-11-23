@@ -1,10 +1,13 @@
 ---
 title: "Stock portfolio summary"
 author: "BScheliga"
-date: "15/10/2021"
+date: "19/11/2021"
 output:
   html_document:
-    df_print: paged
+    toc: true
+    toc_depth: 4
+    toc_float: true
+    number_sections: false
 ---
 
 ```{r setup, include=FALSE}
@@ -21,21 +24,21 @@ theme_set(theme_bw())
 
 ```
 
+## Abstract
 
-This is a test version of the stock portfolio summary. 
+This is script allow you to assess the performance, dividend yield and the sector and market distribution of your stock portfolio. It retrieves the historical stock records based in the EPIC from [https://www.alphavantage.co/](https://www.alphavantage.co/). The usage of Alpha Vantage requires an API-key, which can be requested here [https://www.alphavantage.co/support/#api-key](https://www.alphavantage.co/support/#api-key) 
 
-## Note:
+### Note:
 * change wd to more appropiate
-* might need to use reshape2
 * Add geography category (e.g. Continents or countries maybe)
-* Need account for the average purchase and selling prices. At the moment, we are calculating the overall portfolio value based on the closing value of a stock.
-* need to build a summary for the pie-chart based on Portfolio on the last weekday before Sys.Date 
 
-## Known (potential) issues:
+
+### Known (potential) issues:
 * for app with data entry tool. the user need to investigate, if stock it traded in GPX or GBP
 * Initial I used Yahoo.finace as a data source, but their data was of poor quality. e.g. inconsistent in stock value unit, a timeseries could have GPX and GPB. Hence, I changed to Alpha Vatage. However, they require you to have an API.KEY.
 * identical EPIC's at different Stock exchange, will cause a problems in some of the loops where *vec_EPIC* is used
 * when calculating the investments selling stock with a lose will generate positive values in the cs_???_Inv columns. However, that money is actually lost :(
+* not sure how the plots respond to Stock being completetly sold and later repurchased.
 
 ```{r load your portfolio data, include=FALSE}
 # this is empty
@@ -253,33 +256,50 @@ rm(df_cs_All_value)
 
 ```
 
-# Stock preformance
+# Portfolio distribution
 
 
-```{r Current distributions, echo=FALSE}
+
+```{r Figure 1. Current distributions, echo=FALSE, message=FALSE, warning=FALSE}
 
 # Overall Market & Sector distribution
 subset(df_ETF_Share_ts, Date %in% max(df_ETF_Share_ts$Date))%>%
   group_by(Market, Sector) %>% 
   summarise(across(c(PF_Stock_Value), list(sum = sum))) %>% 
+  droplevels.data.frame() %>% 
   PieDonut(., aes(Market, Sector, count=PF_Stock_Value_sum),
-         title = "Overall Market & Sector distribution",
+         title = "Portfolio Market & Sector distribution",
          color = "black",
                   ratioByGroup = FALSE)
 
+
+```
+
+Figure 1. A Pie chart showing the portfolio's distribution in the different markets (inner ring) and sectors (outer ring). The *"Mixed"* are EFT's that do not focus on a specific sector (e.g. MSCI world).
+
+
+
+```{r Figure 2. Portfolio Sector & Stock distribution, echo=FALSE, message=FALSE, warning=FALSE}
 # Overall Sector & Stock distribution
 subset(df_ETF_Share_ts, Date %in% max(df_ETF_Share_ts$Date))%>%
   select(Sector, EPIC, PF_Stock_Value) %>% 
   droplevels.data.frame() %>% 
   PieDonut(., aes(Sector, EPIC, count=PF_Stock_Value),
-         title = "Overall Sector & Stock distribution",
+         title = "Portfolio Sector & Stock distribution",
          color = "black",
                   ratioByGroup = FALSE)
+```
 
+Figure 2. A Pie chart showing the portfolio's distribution in the different sectors (inner ring) and the respective stocks in the portfolio (outer ring). The *"Mixed"* are EFT's that do not focus on a specific sector (e.g. MSCI world).
+
+
+
+```{r Figure 3. ETF Market & Sector distribution, echo=FALSE, message=FALSE, warning=FALSE}
 ## ETF
 subset(df_ETF_Share_ts, Date %in% max(df_ETF_Share_ts$Date))%>%
   filter(Type =="ETF") %>% 
   group_by(Market, Sector) %>% 
+  droplevels.data.frame() %>% 
   summarise(across(c(PF_Stock_Value), list(sum = sum))) %>% 
   as.data.frame() %>% 
   droplevels(.$Sector) %>% 
@@ -287,7 +307,13 @@ subset(df_ETF_Share_ts, Date %in% max(df_ETF_Share_ts$Date))%>%
          title = "ETF Market & Sector distribution",
          color = "black",
                   ratioByGroup = FALSE)
- 
+```
+
+Figure 3. A Pie chart showing the portfolio's EFT distribution in the different markets (inner ring) and the respective sector distribution (outer ring). The *"Mixed"* are EFT's that do not focus on a specific sector (e.g. MSCI world). 
+
+
+
+```{r Figure 4. Share & Sector distribution, echo=FALSE, message=FALSE, warning=FALSE}
 ## Share
 subset(df_ETF_Share_ts, Date %in% max(df_ETF_Share_ts$Date))%>%
   filter(Type =="Share") %>% 
@@ -298,12 +324,13 @@ subset(df_ETF_Share_ts, Date %in% max(df_ETF_Share_ts$Date))%>%
          title = "Share & Sector distribution",
          color = "black",
                   ratioByGroup = FALSE)
-
 ```
 
+Figure 4. A Pie chart showing the portfolio's share distribution in the different sectors (inner ring) and the respective stocks (outer ring).
 
 
-```{r Overall Portfolio preformance, echo=FALSE}
+
+```{r Overall Portfolio preformance, eval=FALSE, message=FALSE, warning=FALSE, include=FALSE}
 
 ggplot(df_ETF_Share_ts,aes(Date,PF_Stock_Value, fill=EPIC))+geom_area(alpha=0.9, colour="black")+
   ylab("Overall portfolio value in GPB")+xlab("")+theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1))+
@@ -317,20 +344,35 @@ ggplot(df_ETF_Share_ts)+
   scale_color_manual(name = "", values = c("Investment" = "black")) # colour needs to be aes()
 
 
+```
+
+# Portfolio performance
+
+
+
+
+```{r Figure 5.  Portfolio growth [GBP], echo=FALSE, message=FALSE, warning=FALSE}
 df_ETF_Share_ts %>% 
-  select(Date,cs_All_Inv,cs_All_Value) %>% 
+  select(Date,cs_All_Inv,cs_All_Value,cs_Trad_cost) %>% 
   distinct() %>% 
   ggplot(.,aes(Date,cs_All_Inv))+
   geom_area(aes(x=Date, y=ifelse(cs_All_Value>cs_All_Inv, cs_All_Value,cs_All_Inv)), fill="darkgreen", alpha = 0.7)+
   geom_area(aes(x=Date, y=cs_All_Inv), fill="darkred", alpha = 0.7)+
   geom_area(aes(x=Date, y=ifelse(cs_All_Value<cs_All_Inv, cs_All_Value,cs_All_Inv)), fill="grey") +
+  geom_line(aes(Date,cs_Trad_cost,colour="Trading costs"),linetype="dashed")+
   ylab("Portfolio growth [GBP]")+xlab("")+
   theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1))+
-  scale_x_date(date_labels = "%b-%Y", date_breaks = "month")
+  scale_x_date(date_labels = "%b-%Y", date_breaks = "month")+
+  scale_color_manual(name = "", values = c("Trading costs" = "black"))+
+  ggtitle("Portfolio performance over its lifetime")
 
 ```
 
-```{r Portfolio relative gain and losses, echo=FALSE}
+Figure 5. Shows the Portfolio performance over its lifetime with the growth (green) and the shrinking (red) of the investment (grey). The trading costs are represented by the black dashed line.
+
+
+
+```{r Figure 6. Relative gain and losses of stocks in the Portfolio, echo=FALSE}
 
 ggplot(df_ETF_Share_ts)+
   geom_area(aes(x=Date, y=ifelse(rel_Gain_Loss<0, rel_Gain_Loss,0)), fill="darkred", alpha = 0.7) +
@@ -338,31 +380,33 @@ ggplot(df_ETF_Share_ts)+
   geom_hline(yintercept=0, linetype="dashed")+
   ylab("Gain and Losses [%]")+xlab("")+
   theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1))+
-  scale_x_date(date_labels = "%b-%Y", date_breaks = "month")+facet_wrap(~EPIC, ncol = 2)
+  scale_x_date(date_labels = "%b-%Y", date_breaks = "month")+facet_wrap(~EPIC, ncol = 2)+
+  ggtitle("All relative gains and losses of stocks")
 
 
 
 
 ```
 
-```{r Trading costs, echo=FALSE}
+Figure 6. Shows the all relative gains (green) and losses (red) of the stocks inside the portfolio based on their the daily closing values. The shown time period is based on the buy and sold actions surrounding the respective stock. If a stock is completely sold, it time series stop. The relative gains and losses are based on the overall investment into the respective stock.
+
+
+
+```{r Figure 7. Trading costs, echo=FALSE}
 
 ggplot(df_ETF_Share_ts,aes(Date,cs_Trad_cost))+
   geom_line()+
   ylab("Lifetime Trading cost [GPB]")+xlab("")+
   theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1))+
-  scale_x_date(date_labels = "%b-%Y", date_breaks = "month")
+  scale_x_date(date_labels = "%b-%Y", date_breaks = "month")+
+  ggtitle("Lifetime trading costs of the portfolio")
 ```
 
+Figure 7. Shows the trading costs over the lifetime of the portfolio.
 
-```{r ETF preformance, echo=FALSE}
-ggplot(subset(df_ETF_Share_ts, Type %in% "ETF"))+
-  geom_area(aes(x=Date, y=ifelse(PF_Stock_Value>cs_Stock_Inv, PF_Stock_Value,cs_Stock_Inv)), fill="darkgreen", alpha = 0.7)+
-  geom_area(aes(x=Date, y=cs_Stock_Inv), fill="darkred", alpha = 0.7)+
-  geom_area(aes(x=Date, y=ifelse(PF_Stock_Value<cs_Stock_Inv, PF_Stock_Value,cs_Stock_Inv)), fill="grey") +
-  ylab("ETF preformance [GBP]")+xlab("")+
-  theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1))+
-  scale_x_date(date_labels = "%b-%Y", date_breaks = "month")+facet_wrap(~EPIC, ncol = 2)
+
+
+```{r Figure 8. Individual ETF performance gains & losses, echo=FALSE}
 
 ggplot(subset(df_ETF_Share_ts, Type %in% "ETF"))+
   geom_area(aes(x=Date, y=ifelse(rel_Gain_Loss<0, rel_Gain_Loss,0)), fill="darkred", alpha = 0.7) +
@@ -370,32 +414,64 @@ ggplot(subset(df_ETF_Share_ts, Type %in% "ETF"))+
   geom_hline(yintercept=0, linetype="dashed")+
   ylab("Gain and Losses [%]")+xlab("")+
   theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1))+
-  scale_x_date(date_labels = "%b-%Y", date_breaks = "month")+facet_wrap(~EPIC, ncol = 2)
+  scale_x_date(date_labels = "%b-%Y", date_breaks = "month")+facet_wrap(~EPIC, ncol = 2)+
+  ggtitle("Relative gains and losses of the individual ETF stocks")
 
 
 ```
 
+Figure 8. Shows the relative gains (green) and losses (red) of the ETF stocks inside the portfolio based on their the daily closing values. The shown time period is based on the buy and sold actions surrounding the respective stock. If a stock is completely sold, it time series stop. The relative gains and losses are based on the overall investment into the respective stock.
 
-```{r Share preformance, echo=FALSE}
 
+
+```{r Figure 9. ETF performance [GBP], echo=FALSE}
+ggplot(subset(df_ETF_Share_ts, Type %in% "ETF"))+
+  geom_area(aes(x=Date, y=ifelse(PF_Stock_Value>cs_Stock_Inv, PF_Stock_Value,cs_Stock_Inv)), fill="darkgreen", alpha = 0.7)+
+  geom_area(aes(x=Date, y=cs_Stock_Inv), fill="darkred", alpha = 0.7)+
+  geom_area(aes(x=Date, y=ifelse(PF_Stock_Value<cs_Stock_Inv, PF_Stock_Value,cs_Stock_Inv)), fill="grey") +
+  ylab("ETF performance [GBP]")+xlab("")+
+  theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1))+
+  scale_x_date(date_labels = "%b-%Y", date_breaks = "month")+facet_wrap(~EPIC, ncol = 2)+
+  ggtitle("Performance of the individual ETF stocks")
+```
+
+Figure 9. Shows the individual ETF stock performance over their lifetime in the portfolio with the growth (green) and the shrinking (red) of the investment (grey). 
+
+
+
+```{r Figure 10. Share performance gains & losses, echo=FALSE}
+
+ggplot(subset(df_ETF_Share_ts, Type %in% "Share"))+
+  geom_area(aes(x=Date, y=ifelse(rel_Gain_Loss<0, rel_Gain_Loss,0)), fill="darkred", alpha = 0.7) +
+  geom_area(aes(x=Date, y=ifelse(rel_Gain_Loss>0, rel_Gain_Loss, 0)), fill="darkgreen", alpha = 0.7)+
+  geom_hline(yintercept=0, linetype="dashed")+
+  ylab("Gains and Losses [%]")+xlab("")+
+  theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1))+
+  scale_x_date(date_labels = "%b-%Y", date_breaks = "month")+facet_wrap(~EPIC, ncol = 2)+
+  ggtitle("Relative gains and losses of the individual share stocks")
+
+```
+
+Figure 10. Shows the relative gains (green) and losses (red) of the share stocks inside the portfolio based on their the daily closing values. The shown time period is based on the buy and sold actions surrounding the respective stock. If a stock is completely sold, it time series stop. The relative gains and losses are based on the overall investment into the respective stock.
+
+
+
+```{r Figure 11. Share performance [GBP], echo=FALSE}
 ggplot(subset(df_ETF_Share_ts, Type %in% "Share"))+
   geom_area(aes(x=Date, y=ifelse(PF_Stock_Value>cs_Stock_Inv, PF_Stock_Value,cs_Stock_Inv)), fill="darkgreen", alpha = 0.7)+
   geom_area(aes(x=Date, y=cs_Stock_Inv), fill="darkred", alpha = 0.7)+
   geom_area(aes(x=Date, y=ifelse(PF_Stock_Value<cs_Stock_Inv, PF_Stock_Value,cs_Stock_Inv)), fill="grey") +
   ylab("Share preformance [GBP]")+xlab("")+
   theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1))+
-  scale_x_date(date_labels = "%b-%Y", date_breaks = "month")+facet_wrap(~EPIC, ncol = 2)
-
-ggplot(subset(df_ETF_Share_ts, Type %in% "Share"))+
-  geom_area(aes(x=Date, y=ifelse(rel_Gain_Loss<0, rel_Gain_Loss,0)), fill="darkred", alpha = 0.7) +
-  geom_area(aes(x=Date, y=ifelse(rel_Gain_Loss>0, rel_Gain_Loss, 0)), fill="darkgreen", alpha = 0.7)+
-  geom_hline(yintercept=0, linetype="dashed")+
-  ylab("Gain and Losses [%]")+xlab("")+
-  theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1))+
-  scale_x_date(date_labels = "%b-%Y", date_breaks = "month")+facet_wrap(~EPIC, ncol = 2)
-
+  scale_x_date(date_labels = "%b-%Y", date_breaks = "month")+facet_wrap(~EPIC, ncol = 2)+
+  ggtitle("Performance of the individual share stocks")
 ```
-```{r Share vs ETF, echo=FALSE}
+
+Figure 11. Shows the Individual share stock performance over their lifetime in the portfolio with the growth (green) and the shrinking (red) of the investment (grey).
+
+
+
+```{r Figure 12. Share vs ETF, echo=FALSE}
 
 ggplot(df_ETF_Share_ts)+
   geom_area(aes(x=Date, y=ifelse(RGL_EFTShare<0, RGL_EFTShare,0)), fill="darkred", alpha = 0.7, position = "identity") +
@@ -404,16 +480,19 @@ ggplot(df_ETF_Share_ts)+
   facet_wrap(~Type)+
   ylab("Gain and Losses [%]")+xlab("")+
   theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1))+
-  scale_x_date(date_labels = "%b-%Y", date_breaks = "month")
-
-
+  scale_x_date(date_labels = "%b-%Y", date_breaks = "month")+
+  ggtitle("Gains and losses ETF versus Share")
 
 
 ```
+Figure 12. Shows the relative gains (green) and losses (red) between ETF and share stocks in the portfolio based on their the daily closing values. The shown time period is based on the buy and sold actions surrounding the respective stock. If a stock is completely sold, it time series stop. The relative gains and losses are based on the overall investment into the respective stock.
+
+
+
 # Dividend assessment
 
 
-```{r Calculating the dividend per stock, include=FALSE}
+```{r Calculating the dividend per stock, message=FALSE, warning=FALSE, include=FALSE}
 
 for(i in 1:length(vec_EPIC)){
   k = which (str_detect(vec_PF_StockNames, vec_EPIC[i])) # check which EPIC matches which data.frame name for the historical record in vec_PF_StockNames. NOTE: identical EPIC's at different Stock exchange, will cause a problem here
@@ -447,16 +526,36 @@ df_PF_div$Div_yield <- round((df_PF_div$Amount_Payable/df_PF_div$PF_Stock_Value)
 ```
 
 
-```{r Paid out dividends per year}
+```{r Figure 13. Paid out dividends per year, echo=FALSE}
 
 df_PF_div %>% 
   group_by(Year = format(Issue_Date, format="%Y")) %>% 
 ggplot(., aes(x = Year,y = Amount_Payable))+geom_bar(stat = "identity", fill="darkgreen", alpha=0.7)+
-  ylab("Dividend paid out [GPB]")+xlab("")
+  ylab("Dividend paid out [GPB]")+xlab("")+
+  ggtitle("Dividend paid out per year")
 
 ```
 
-```{r }
+Figure 13. 
+
+
+
+```{r Figure 14. Dividend payout per year, echo=FALSE, message=FALSE, warning=FALSE}
+
+
+df_PF_div %>% 
+  group_by(EPIC,Year = format(Issue_Date, format="%Y")) %>%
+  summarise(Sum = sum(Amount_Payable), Sum_yield = sum(Div_yield), Payouts = n() ) %>% 
+ggplot(., aes(x = Year ,y = Sum, fill=EPIC ))+
+  geom_col( colour = "Black", position = position_dodge(), alpha=0.7)+
+  geom_text(aes(label=paste(Sum_yield,"%",sep=""), group = EPIC),vjust=-.6, position = position_dodge(width=0.9), size=2.5)+
+  geom_text(aes(label=paste(Payouts), group = EPIC),vjust=1.2,colour="Darkred", position = position_dodge(width=0.9), size=3)+
+  ylab("Dividend paid out [GPB]")+xlab("")
+```
+
+Figure 14.
+
+```{r Figure 15., echo=FALSE, message=FALSE, warning=FALSE}
 # Life time paid out
 df_PF_div %>% 
   group_by(EPIC) %>%
@@ -464,14 +563,15 @@ df_PF_div %>%
 ggplot(., aes(x = EPIC ,y = sum))+geom_bar(stat = "identity", fill="darkgreen", alpha=0.7)+
   ylab("Dividend paid out [GPB]")+xlab("")
 
+```
 
-df_PF_div %>% 
-  group_by(EPIC,Year = format(Issue_Date, format="%Y")) %>%
-  summarise(Sum = sum(Amount_Payable), Sum_yield = sum(Div_yield), Payouts = n() ) %>% 
-ggplot(., aes(x = Year ,y = Sum, fill=EPIC ))+
-  geom_col(stat = "identity", colour = "Black", position = position_dodge(), alpha=0.7)+
-  geom_text(aes(label=paste(Sum_yield,"%",sep=""), group = EPIC),vjust=-.6, position = position_dodge(width=0.9), size=2.5)+
-  geom_text(aes(label=paste(Payouts), group = EPIC),vjust=1.2,colour="Darkred", position = position_dodge(width=0.9), size=3)+
-  ylab("Dividend paid out [GPB]")+xlab("")
+Figure 15.
+
+## Dividends vs Trading costs
+
+```{r eval=FALSE, include=FALSE}
+df_ETF_Share_ts %>% 
+  group_by(Year = format(Date, format="%Y")) %>% 
+  
 ```
 
