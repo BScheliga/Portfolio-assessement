@@ -18,6 +18,7 @@ library(vroom)
 library(lubridate)
 library(ggthemes)
 library(webr)# for PieDonut()
+library(here)
 
 ### ggplot theme
 theme_set(theme_bw())
@@ -44,14 +45,14 @@ This is script allow you to assess the performance, dividend yield and the secto
 # this is empty
 dir()
 # loading the dataset with the trading activities
-df_PF_input <- vroom("ETF_Share.csv",col_types = c(EPIC = "f", Name = "f", Buy_Sell = "f", Type = "f", Sector = "f", Market = "f")) # "f" for factor, 
+df_PF_input <- vroom(here("ETF_Share.csv"),col_types = c(EPIC = "f", Name = "f", Buy_Sell = "f", Type = "f", Sector = "f", Market = "f")) # "f" for factor, 
 
 # Formatting the Date column. 
 df_PF_input <- mutate(df_PF_input,Date = dmy(Date)) 
 
 
 # loading the dataset with the dividend history
-df_PF_div <- vroom("dividend.csv",col_types = c(EPIC = "f", Name = "f", Type = "f")) # "f" for factor, 
+df_PF_div <- vroom(here("dividend.csv"),col_types = c(EPIC = "f", Name = "f", Type = "f")) # "f" for factor, 
 
 # Formatting the Date column. 
 df_PF_div <- mutate(df_PF_div,Issue_Date = dmy(Issue_Date))
@@ -104,17 +105,17 @@ df_ETF_Share_Inv <- df_ETF_Share_Inv %>% group_by(Type) %>% mutate(cs_ETF_Share_
 
 # One API can do 5 requests per hour aka request 5 stock timeseries
 API_KEY_1 <- "23OWOXACHQ1GPHF3"
-API_KEY_2 <- "E0FOXEVH0PJN42RA"
-API_KEY_3 <- "ZSDYFZL73TSULLRI"
-API_KEY_4 <- "66DBPI7BYN4OFIEC"
-API_KEY_5 <- "ZLAULT9DJDDNRRSH"
+API_KEY_2 <- "23OWOXACHQ1GPHF3"
+API_KEY_3 <- "23OWOXACHQ1GPHF3"
+API_KEY_4 <- "23OWOXACHQ1GPHF3"
+API_KEY_5 <- "23OWOXACHQ1GPHF3"
 
 ## store all the names of the API-Key object with an 
 ## this will be used to cycle through API-keys with each request
 API_ABDN <- ls(pattern="API_KEY")
 
 # to keep track of how many are left of the day, 5*500=2500 per day
-API_counter <- 2500
+API_counter <- 500
 
 ```
 
