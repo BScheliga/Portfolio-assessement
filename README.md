@@ -3,38 +3,38 @@
 
 ## Abstract
 
-This is RMarkdown script allow you to assess the performance, dividend yield as well as the sector and market distribution of your stock portfolio. I created this script as a pet project, because my broker does not offer this kind of visualisation for my portfolio and I am tired using excels for it.
+This is RMarkdown script allow you to assess the performance, dividend yield as well as the sector and market distribution of your stock portfolio. I created this script as a pet project because my broker does not offer this kind of visualisation for my portfolio and I am tired using excels for it.
 
-I try do make the script as generic as possible to increase the accessiblity for other users.
+I try do make the script as generic as possible to increase the accessibility for other users.
 
 ## Notes
-- currently the script is hard coded to retrieve historical stock records for stocks traded at the London stock exchange using the surfix "*.L*" after the *EPIC* in the *getSymbol()*-funtion. Without the surfix, *getSymbol()* would retrieve historical stock records for companies listed under used EPICs at the american stock exchange (Note:*not sure exhange. I don't really care, as it is not relevant for me at the moment*)
+- currently the script is hard coded to retrieve historical stock records for stocks traded at the London stock exchange using the suffix "*.L*" after the *EPIC* in the *getSymbol()*-function. Without the suffix, *getSymbol()* would retrieve historical stock records for companies listed under used EPICs at the American stock exchange (Note:*not sure exchange. I don't really care, as it is not relevant for me at the moment*)
 
 ### Known issues
-- some historical stock records are in GB pence and other in GBP. Generally they should be in GB pence. However, if the plot look funny and don't add up. It is worth investigating the historical stock records.
+- some historical stock records are in GB pence and other in GBP. Generally, they should be in GB pence. However, if the plot looks funny and don't add up. It is worth investigating the historical stock records.
 
 ### Planned changes
-- make changing the stock exchange surfix for retrieving historical stock records (**getSymbol()**) more accessible
+- make changing the stock exchange suffix for retrieving historical stock records (**getSymbol()**) more accessible
 - use here-package
 
 ## Where to the time series data comes from?
 
-Using quantmod
-
-The historical stock records based in the EPIC from [https://www.alphavantage.co/](https://www.alphavantage.co/). The usage of Alpha Vantage requires an API-key, which can be requested here [https://www.alphavantage.co/support/#api-key](https://www.alphavantage.co/support/#api-key) 
+The core R library in this script is [quantmod](https://cran.r-project.org/web/packages/quantmod/quantmod.pdf), it allows you to pull the historical stock records from various sources. Quantmod requires the EPIC of a stock and a suffix (e.g. ".L" for London stock change) to pull the data. I once [https://www.alphavantage.co/](https://www.alphavantage.co/) as a data supplier. Some data for [yahoo finance](https://uk.finance.yahoo.com/) would need more hands-on interrogation and cleaning. The usage of Alpha Vantage requires an API-key, which can be requested here [https://www.alphavantage.co/support/#api-key](https://www.alphavantage.co/support/#api-key) 
 
 ## How to use it?
 
+Install 1. R, 2. RStudio and then install all required packages (libraries) inside RStudio
+
 ### Warning & Disclaimer
-1. Make sure you are not **accidentally and unintentionally** uploading trading action history to github when cloning and using this script.  
-2. I think it is working corr
+1. Make sure you are not **accidentally and unintentionally** uploading your trading action history to GitHub when cloning and using this script.  
+2. It **does not** give you financial advise  
 ### API-key
 ### Change stock exchange from London to some other place?
 
-You could try to use [https://uk.finance.yahoo.com/](https://uk.finance.yahoo.com/) to identify the correct surfix after the EPIC and change the code in the script accordingly.
+You could try to use [https://uk.finance.yahoo.com/](https://uk.finance.yahoo.com/) to identify the correct suffix after the EPIC and change the code in the script accordingly.
 
 ### Input files
-The script need two inputs file in .csv-format. 1) a file that details the **trading action history** of the portfolio, that you would like to assess. 2) A file that details the **dividend pay out history**. 
+The script needs two inputs file in .csv-format. 1) a file that details the **trading action history** of the portfolio, that you would like to assess. 2) A file that details the **dividend pay out history**. Both files [ETF_Share.csv](https://github.com/BScheliga/Portfolio-assessement/blob/main/ETF_Share.csv) and [dividend.csv](https://github.com/BScheliga/Portfolio-assessement/blob/main/dividend.csv) are in the repository with the example data below.
 
 #### 1) ETF and Share trading action history
 Filename: ETF_Share.csv  
@@ -91,12 +91,3 @@ Variable definition:
 |XD_Date| dividend ex-date|DD/MM/YYYY|
 |Shares_held_XD_date| number of share held on the dividend ex-date|*numeric*|
 |Type| Use **ETF** or **Share**|*character*|
-
-
-
-
-
-## Notes
-### Known issues
-### Planned changes
-
