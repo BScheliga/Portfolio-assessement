@@ -102,7 +102,7 @@ df_ETF_Share_Inv <- df_ETF_Share_Inv %>% group_by(Type) %>% mutate(cs_ETF_Share_
 ```
 
 ```{r Setup API.KEY revolver, include=FALSE}
-
+# If available this section would allow you to cycle through multiple API-keys
 # One API can do 5 requests per hour aka request 5 stock timeseries
 API_KEY_1 <- "23OWOXACHQ1GPHF3"
 API_KEY_2 <- "23OWOXACHQ1GPHF3"
@@ -230,9 +230,13 @@ df_ETF_Share_ts <- df_ETF_Share_ts[!is.na(df_ETF_Share_ts$cs_Volume),]
 # Calculating the overall Stock value in Portfolio
 df_ETF_Share_ts$PF_Stock_Value <- round((df_ETF_Share_ts$cs_Volume * df_ETF_Share_ts$Value)/100,2) # to have it in GBP
 
-# VUSA.L is displayed in GBP and not pence
 
+# VUSA.L is displayed in GBP and not pence
+if(any(levels(df_ETF_Share_ts$EPIC) == "VUSA")){
 df_ETF_Share_ts$PF_Stock_Value[df_ETF_Share_ts$EPIC == "VUSA"]<- df_ETF_Share_ts$PF_Stock_Value[df_ETF_Share_ts$EPIC == "VUSA"]*100
+}else{
+  
+}
 
 ```
 
