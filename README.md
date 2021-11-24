@@ -19,16 +19,22 @@ I try do make the script as generic as possible to increase the accessibility fo
 
 ## Where to the time series data comes from?
 
-The core R library in this script is [quantmod](https://cran.r-project.org/web/packages/quantmod/quantmod.pdf), it allows you to pull the historical stock records from various sources. Quantmod requires the EPIC of a stock and a suffix (e.g. ".L" for London stock change) to pull the data. I once [https://www.alphavantage.co/](https://www.alphavantage.co/) as a data supplier. Some data for [yahoo finance](https://uk.finance.yahoo.com/) would need more hands-on interrogation and cleaning. The usage of Alpha Vantage requires an API-key, which can be requested here [https://www.alphavantage.co/support/#api-key](https://www.alphavantage.co/support/#api-key) 
+The core R library in this script is [quantmod](https://cran.r-project.org/web/packages/quantmod/quantmod.pdf), it allows you to pull the historical stock records from various sources. Quantmod requires the EPIC of a stock and a suffix (e.g. ".L" for London stock change) to pull the data. I chose [https://www.alphavantage.co/](https://www.alphavantage.co/) as a data supplier. Some data for [yahoo finance](https://uk.finance.yahoo.com/) would need more hands-on interrogation and cleaning. The usage of Alpha Vantage requires an API-key, which can be requested here [https://www.alphavantage.co/support/#api-key](https://www.alphavantage.co/support/#api-key) 
 
 ## How to use it?
 
-Install 1. R, 2. RStudio and then install all required packages (libraries) inside RStudio
+1. Install R 
+2. Instal RStudio 
+3. Install all required R packages (libraries) in RStudio
+4. Request your own API-Key [https://www.alphavantage.co/support/#api-key](https://www.alphavantage.co/support/#api-key) and replace it with the one in the script.  
+
 
 ### Warning & Disclaimer
 1. Make sure you are not **accidentally and unintentionally** uploading your trading action history to GitHub when cloning and using this script.  
 2. It **does not** give you financial advise  
 ### API-key
+API-KEY limits: 5 API requests per minute and 500 requests per day
+
 ### Change stock exchange from London to some other place?
 
 You could try to use [https://uk.finance.yahoo.com/](https://uk.finance.yahoo.com/) to identify the correct suffix after the EPIC and change the code in the script accordingly.
