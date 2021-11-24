@@ -1,8 +1,9 @@
 # Portfolio assessement
 
+
 ## Abstract
 
-This is RMarkdown script allow you to assess the performance, dividend yield as well as the sector and market distribution of your stock portfolio. I created this script, because my broker does not offer this kind of visualisation of my portfolio and I tried using excels for it.
+This is RMarkdown script allow you to assess the performance, dividend yield as well as the sector and market distribution of your stock portfolio. I created this script as a pet project, because my broker does not offer this kind of visualisation of my portfolio and I tried using excels for it.
 
 I try do make the script as generic as possible to increase the accessiblity for other users.
 
