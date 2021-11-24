@@ -1,3 +1,1 @@
 *.html linguist-detectable=false
-*.R linguist-detectable=true
-*.RMarkdown linguist-detectable=true
