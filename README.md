@@ -15,7 +15,7 @@ I try do make the script as generic as possible to increase the accessibility fo
 
 ### Planned changes
 - make changing the stock exchange suffix for retrieving historical stock records (**getSymbol()**) more accessible
-- use here-package
+- redo the pieDonut charts, they are ugly
 
 ## Where to the time series data comes from?
 
