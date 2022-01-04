@@ -35,6 +35,7 @@ This is script allow you to assess the performance, dividend yield and the secto
 
 
 ### Known (potential) issues:
+* freshly bought stocks won't show up in the summary until a daily value is available
 * for app with data entry tool. the user need to investigate, if stock it traded in GPX or GBP
 * Initial I used Yahoo.finace as a data source, but their data was of poor quality. e.g. inconsistent in stock value unit, a timeseries could have GPX and GPB. Hence, I changed to Alpha Vatage. However, they require you to have an API.KEY.
 * identical EPIC's at different Stock exchange, will cause a problems in some of the loops where *vec_EPIC* is used
