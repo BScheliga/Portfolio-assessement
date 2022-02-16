@@ -577,7 +577,12 @@ Figure 15.
 
 ```{r eval=FALSE, include=FALSE}
 df_ETF_Share_ts %>% 
-  group_by(Year = format(Date, format="%Y")) %>% 
+  group_by(Year = format(Date, format="%Y")) %>%
+  summarise("Trading Costs" = sum(Trad_cost,na.rm= TRUE)) %>% 
+  left_join(
+    df_PF_div %>% 
+    group_by(Year = format(Issue_Date, format="%Y")) %>%
+    summarise("Divided payout" = sum(Amount_Payable)), by = "Year")
   
 ```
 
