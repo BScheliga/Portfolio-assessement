@@ -37,8 +37,13 @@ API-KEY limits: 5 API requests per minute and 500 requests per day
 
 ### Change stock exchange from London to some other place?
 
-You could try to use [https://uk.finance.yahoo.com/](https://uk.finance.yahoo.com/) to identify the correct suffix after the EPIC and change the code in the script accordingly.
+You could try to use [https://uk.finance.yahoo.com/](https://uk.finance.yahoo.com/) to identify the correct suffix after the EPIC and change the code in the script accordingly. Change "var_StockExch" in chunk "Get Stock exchange data". 
 
+|Stock exchange|Extension|
+|----|----|
+|Germany| .DE|
+|London| .L|
+  
 ### Input files
 The script needs two inputs file in .csv-format. 1) a file that details the **trading action history** of the portfolio, that you would like to assess. 2) A file that details the **dividend pay out history**. Both files [ETF_Share.csv](https://github.com/BScheliga/Portfolio-assessement/blob/main/ETF_Share.csv) and [dividend.csv](https://github.com/BScheliga/Portfolio-assessement/blob/main/dividend.csv) are in the repository with the example data below.
 
