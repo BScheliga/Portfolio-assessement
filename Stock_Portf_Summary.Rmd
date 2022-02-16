@@ -575,7 +575,7 @@ Figure 15.
 
 ## Dividends vs Trading costs
 
-```{r eval=FALSE, include=FALSE}
+```{r echo=FALSE}
 df_ETF_Share_ts %>% 
   group_by(Year = format(Date, format="%Y")) %>%
   summarise("Trading Costs" = sum(Trad_cost,na.rm= TRUE)) %>% 
