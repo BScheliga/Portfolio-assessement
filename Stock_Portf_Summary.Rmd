@@ -37,7 +37,7 @@ This is script allow you to assess the performance, dividend yield and the secto
 ### Known (potential) issues:
 * freshly bought stocks won't show up in the summary until a daily value is available
 * for app with data entry tool. the user need to investigate, if stock it traded in GPX or GBP
-* Initial I used Yahoo.finace as a data source, but their data was of poor quality. e.g. inconsistent in stock value unit, a timeseries could have GPX and GPB. Hence, I changed to Alpha Vatage. However, they require you to have an API.KEY.
+* Initial I used Yahoo.finance as a data source, but their data was of poor quality. e.g. inconsistent in stock value unit, a timeseries could have GPX and GPB. Hence, I changed to Alpha Vatage. However, they require you to have an API.KEY.
 * identical EPIC's at different Stock exchange, will cause a problems in some of the loops where *vec_EPIC* is used
 * when calculating the investments selling stock with a lose will generate positive values in the cs_???_Inv columns. However, that money is actually lost :(
 * not sure how the plots respond to Stock being completetly sold and later repurchased.
@@ -127,14 +127,14 @@ API_counter <- 500
 # we are using the vec_EPIC with our stock EPIC's to retrieve the historical data for each stock using getSymbols()
 # Note need the ".L" for London stock exchange. NASDAQ is the default
 
-df_StockExch <- ".L" # I know, not a data frame, yet. However, it is likely that is will be one in a later version to be able pull the hist. data for stocks at different Stock exchange in a portfolio
+var_StockExch <- ".L" # I know, not a data frame, yet. However, it is likely that is will be one in a later version to be able pull the hist. data for stocks at different Stock exchange in a portfolio
 
 # Setup 
 keycnt=1 # will be used to go through the API's
 
 for(i in 1:length(vec_EPIC)){
   start_time <- Sys.time() # when the loop starts
-  getSymbols(paste(vec_EPIC[i],df_StockExch,sep = ""), src="av", api.key=get(API_ABDN[keycnt]), periodicity="daily", output.size="full")
+  getSymbols(paste(vec_EPIC[i],var_StockExch,sep = ""), src="av", api.key=get(API_ABDN[keycnt]), periodicity="daily", output.size="full")
   API_counter <- API_counter-1
   print(get(API_ABDN[keycnt]))
 print(paste(API_counter, "requests left on API", sep = " "))
