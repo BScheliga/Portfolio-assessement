@@ -1,7 +1,7 @@
 ---
 title: "Stock portfolio summary"
 author: "BScheliga"
-date: "19/11/2021"
+date: "`r format(Sys.time(), '%d %B, %Y')`"
 output:
   html_document:
     toc: true
@@ -195,7 +195,7 @@ for(i in 1:length(vec_PF_StockNames)){
 
 
 for(i in 1:length(vec_EPIC)){
-  k = which (str_detect(vec_PF_StockNames, vec_EPIC[i])) # check which EPIC matches which data.frame name for the historical record in vec_PF_StockNames. NOTE: identical EPIC's at different Stock exchange, will cause a problem here
+  k = which(grepl(paste("\\b",vec_EPIC[i],".L\\b", sep=""),vec_PF_StockNames)) # check which EPIC matches which data.frame name for the historical record in vec_PF_StockNames. NOTE: identical EPIC's at different Stock exchange, will cause a problem here
   df_temp <- left_join(df_ETF_Share_ts %>% filter(EPIC == vec_EPIC[i]), get(vec_PF_StockNames[k])[ , c("Date",paste(vec_PF_StockNames[k],".Close",sep = ""))], by = "Date", )
   
   colnames(df_temp)[ncol(df_temp)] <- "Value" # ncol() give us the number of columns in df_temp and coincidentally that number also relates to the last column, which we want to rename. 
@@ -501,7 +501,7 @@ Figure 12. Shows the relative gains (green) and losses (red) between ETF and sha
 ```{r Calculating the dividend per stock, message=FALSE, warning=FALSE, include=FALSE}
 
 for(i in 1:length(vec_EPIC)){
-  k = which (str_detect(vec_PF_StockNames, vec_EPIC[i])) # check which EPIC matches which data.frame name for the historical record in vec_PF_StockNames. NOTE: identical EPIC's at different Stock exchange, will cause a problem here
+  k = which(grepl(paste("\\b",vec_EPIC[i],".L\\b", sep=""),vec_PF_StockNames)) # check which EPIC matches which data.frame name for the historical record in vec_PF_StockNames. NOTE: identical EPIC's at different Stock exchange, will cause a problem here
   df_temp <- left_join(df_PF_div %>% filter(EPIC == vec_EPIC[i]), get(vec_PF_StockNames[k])[ , c("Date",paste(vec_PF_StockNames[k],".Close",sep = ""))], by = c("XD_Date"="Date"), )
   
   colnames(df_temp)[ncol(df_temp)] <- "Value" # ncol() give us the number of columns in df_temp and coincidentally that number also relates to the last column, which we want to rename. 
