@@ -262,8 +262,21 @@ rm(df_cs_All_value)
 
 ```
 
-# Portfolio distribution
 
+# Sells (*Find better title later*)
+
+|EPIC|Bought for|Sold for| Gains & Losses £|Gains & Losses %|Gains & Losses incl. Trading costs & Dividends £|Bought when| Sold when| Hold for|
+
+```{r Stats on stock sells, echo=FALSE}
+# I only need to input table & the dividend table
+df_PF_input %>% filter(Buy_Sell == c("SELL", "BUY"))
+  
+  
+  
+```
+
+
+# Portfolio distribution
 
 
 ```{r Figure 1. Current distributions, echo=FALSE, message=FALSE, warning=FALSE}
