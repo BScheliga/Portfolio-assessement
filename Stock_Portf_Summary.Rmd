@@ -125,7 +125,7 @@ df_PF_input %>% filter(EPIC %in%  df_Stocks_sold$EPIC) %>% select(EPIC,Buy_Sell,
               filter(EPIC %in%  df_Stocks_sold$EPIC) %>% group_by(EPIC) %>%               summarise(Over_Div = sum(Amount_Payable)),by = "EPIC") %>% # setting the order of the table
   relocate(c(Bought_For,Sold_For), .after=EPIC) %>% relocate(Over_Div, .after= Overall_Trad_cost) %>% 
   # Final sumarise, I promise
-  summarise(EPIC=EPIC, "Bought [£]" = round(Bought_For,2), "Sold [£]" = round(Sold_For,2), "Gain & Losses [£]" = round(Gain_Losses_GPB,2), "Gain & Losses [%]" = round(Gain_Losses_GPB/Sold_For*100,1),"Gain & Losses corrected* [£]" = (Gain_Losses_GPB-Overall_Trad_cost+Over_Div), "Time held" = Time_held) %>% kable()
+  summarise(EPIC=EPIC, "Bought [£]" = round(Bought_For,2), "Sold [£]" = round(Sold_For,2), "Gain & Losses [£]" = round(Gain_Losses_GPB,2), "Gain & Losses [%]" = round(Gain_Losses_GPB/Sold_For*100,1),"Gain & Losses corrected* [£]" = round((Gain_Losses_GPB-Overall_Trad_cost+na.omit(Over_Div)),2), "Time held" = Time_held) %>% kable()
 
 ```
 * *includes trading costs and dividend payouts that occurred while the stock was held*
