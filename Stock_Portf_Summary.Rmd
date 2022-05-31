@@ -19,6 +19,7 @@ library(lubridate)
 library(ggthemes)
 library(webr)# for PieDonut()
 library(here)
+library(knitr)
 
 ### ggplot theme
 theme_set(theme_bw())
@@ -103,30 +104,31 @@ df_ETF_Share_Inv <- df_ETF_Share_Inv %>% group_by(Type) %>% mutate(cs_ETF_Share_
 ```
 
 
-# Sells (*Find better title later* and move this calucaltion update)
+# Balance of fully sold stocks
 
-|EPIC|Bought for|Sold for| Gains & Losses £|Gains & Losses %|Gains & Losses incl. Trading costs & Dividends £|Bought when| Sold when| Hold for|
 
 ```{r Stats on stock sells, echo=FALSE}
-# I only need to rinput table & the dividend table
+# I only need to the PF_input table & the dividend table
 
 # Identifying the stock that have been (partially) sold
 df_Stocks_sold <- df_PF_input %>% filter(Buy_Sell == "SELL") %>% select(EPIC)
 
 # Now we need to build the data.frame summarize everything
-df_PF_input %>% filter(EPIC == df_Stocks_sold$EPIC) %>% select(EPIC,,Buy_Sell, Aver_cost, Volume, Date, Trad_cost)
+## Note the minus in front of sum(Aver_cost*Volume), is necessary to show gains a positives and losses as negative. As the value of "Volume" for selling is a negative number
+df_PF_input %>% filter(EPIC == df_Stocks_sold$EPIC) %>% select(EPIC,Buy_Sell, Aver_cost, Volume, Date, Trad_cost) %>% group_by(EPIC) %>%   summarise(Gain_Losses_GPB = -sum(Aver_cost*Volume)/100,Overall_Trad_cost = sum(Trad_cost), Time_held = max(Date)-min(Date)) %>% 
+  # calculating overall buying cost 
+  left_join(df_PF_input %>% filter(EPIC == df_Stocks_sold$EPIC & Buy_Sell == "BUY" ) %>% select(EPIC,Buy_Sell, Aver_cost, Volume) %>%  group_by(EPIC) %>% summarise(Bought_For = sum(Aver_cost*Volume)/100),by = "EPIC") %>% 
+  # calculating overall selling price
+   left_join(df_PF_input %>% filter(EPIC == df_Stocks_sold$EPIC & Buy_Sell == "SELL" ) %>% select(EPIC,Buy_Sell, Aver_cost, Volume) %>%  group_by(EPIC) %>% summarise(Sold_For = sum(Aver_cost*abs(Volume))/100),by = "EPIC") %>% 
+  # adding Dividends payouts
+  left_join(df_PF_div %>% 
+              filter(EPIC == df_Stocks_sold$EPIC) %>% group_by(EPIC) %>%               summarise(Over_Div = sum(Amount_Payable)),by = "EPIC") %>% # setting the order of the table
+  relocate(c(Bought_For,Sold_For), .after=EPIC) %>% relocate(Over_Div, .after= Overall_Trad_cost) %>% 
+  # Final sumarise, I promise
+  summarise(EPIC=EPIC, "Bought [£]" = round(Bought_For,2), "Sold [£]" = round(Sold_For,2), "Gain & Losses [£]" = round(Gain_Losses_GPB,2), "Gain & Losses [%]" = round(Gain_Losses_GPB/Sold_For*100,1),"Gain & Losses corrected* [£]" = (Gain_Losses_GPB-Overall_Trad_cost+Over_Div), "Time held" = Time_held) %>% kable()
 
-
-
-df_PF_input %>% filter(EPIC == df_Stocks_sold$EPIC) %>% group_by(EPIC) %>% summarise(n = sum(Aver_cost*Volume))
-  
-  filter(Buy_Sell == c("SELL", "BUY"))
-  
-  
-  
 ```
-
-
+* *includes trading costs and dividend payouts that occurred while the stock was held*
 
 
 
@@ -612,7 +614,8 @@ df_ETF_Share_ts %>%
   left_join(
     df_PF_div %>% 
     group_by(Year = format(Issue_Date, format="%Y")) %>%
-    summarise("Divided payout" = sum(Amount_Payable)), by = "Year")
+    summarise("Divided payout" = sum(Amount_Payable)), by = "Year") %>% 
+  kable()
   
 ```
 
